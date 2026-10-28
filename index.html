@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Explorador de Ángulos</title>
+    <!-- Tailwind CSS para el diseño -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Fuente amigable para niños -->
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: #f0fdf4; /* Fondo verde muy claro */
+            background-image: radial-gradient(#bbf7d0 2px, transparent 2px);
+            background-size: 30px 30px;
+        }
+        
+        /* Estilos personalizados para el slider */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 32px;
+            width: 32px;
+            border-radius: 50%;
+            background: #ec4899; /* Rosa vibrante */
+            cursor: pointer;
+            margin-top: -12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border: 3px solid white;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 12px;
+            cursor: pointer;
+            background: #93c5fd; /* Azul claro */
+            border-radius: 999px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white rounded-3xl shadow-2xl overflow-hidden w-full max-w-4xl flex flex-col md:flex-row border-4 border-green-400">
+        
+        <!-- Panel Izquierdo: Controles -->
+        <div class="w-full md:w-1/2 p-8 bg-green-50 flex flex-col justify-center">
+            <h1 class="text-4xl font-black text-green-600 mb-2 text-center md:text-left shadow-sm">
+                ¡Descubre los Ángulos!
+            </h1>
+            <p class="text-green-700 text-lg mb-8 text-center md:text-left font-bold">
+                Mueve el control para cambiar los grados
+            </p>
+
+            <!-- Control Deslizante -->
+            <div class="mb-8">
+                <input type="range" id="angleSlider" min="0" max="360" value="45" class="w-full">
+            </div>
+
+            <!-- Entrada de Número -->
+            <div class="flex items-center justify-center space-x-4 mb-8">
+                <label for="angleInput" class="text-2xl font-bold text-gray-700">Grados:</label>
+                <input type="number" id="angleInput" min="0" max="360" value="45" 
+                       class="text-3xl font-black text-center text-pink-500 w-28 py-2 px-4 rounded-xl border-4 border-pink-300 focus:border-pink-500 focus:outline-none shadow-inner">
+                <span class="text-3xl font-black text-gray-700">°</span>
+            </div>
+
+            <!-- Información del Ángulo -->
+            <div class="bg-white rounded-2xl p-6 text-center shadow-lg border-2 border-gray-100 transition-colors duration-300" id="infoCard">
+                <p class="text-gray-500 font-bold uppercase tracking-wider text-sm mb-1">Tipo de Ángulo</p>
+                <h2 id="angleType" class="text-3xl font-black text-blue-600">Agudo</h2>
+                <p id="angleDescription" class="text-gray-600 mt-2 font-semibold">Mide menos de 90°</p>
+            </div>
+        </div>
+
+        <!-- Panel Derecho: Lienzo del Ángulo -->
+        <div class="w-full md:w-1/2 p-8 flex items-center justify-center bg-white relative">
+            <div class="relative w-full aspect-square max-w-sm">
+                <!-- El canvas donde dibujaremos con JavaScript -->
+                <canvas id="angleCanvas" width="400" height="400" class="w-full h-full"></canvas>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Referencias a los elementos del DOM
+        const slider = document.getElementById('angleSlider');
+        const numberInput = document.getElementById('angleInput');
+        const canvas = document.getElementById('angleCanvas');
+        const ctx = canvas.getContext('2d');
+        const angleTypeName = document.getElementById('angleType');
+        const angleTypeDesc = document.getElementById('angleDescription');
+        const infoCard = document.getElementById('infoCard');
+
+        // Función para obtener la clasificación del ángulo
+        function getAngleInfo(degrees) {
+            if (degrees === 0) {
+                return { name: "Nulo", desc: "Mide exactamente 0°. ¡No hay abertura!", color: "#9ca3af", bg: "#f3f4f6" }; // Gris
+            } else if (degrees > 0 && degrees < 90) {
+                return { name: "Agudo", desc: "Mide más de 0° y menos de 90°. ¡Es pequeñito!", color: "#3b82f6", bg: "#eff6ff" }; // Azul
+            } else if (degrees === 90) {
+                return { name: "Recto", desc: "Mide exactamente 90°. Como la esquina de un cuadrado.", color: "#ef4444", bg: "#fef2f2" }; // Rojo
+            } else if (degrees > 90 && degrees < 180) {
+                return { name: "Obtuso", desc: "Mide más de 90° y menos de 180°. ¡Es bastante abierto!", color: "#eab308", bg: "#fefce8" }; // Amarillo
+            } else if (degrees === 180) {
+                return { name: "Llano", desc: "Mide exactamente 180°. Es completamente plano.", color: "#10b981", bg: "#ecfdf5" }; // Verde
+            } else if (degrees > 180 && degrees < 360) {
+                return { name: "Cóncavo", desc: "Mide más de 180° y menos de 360°. ¡Da la vuelta por abajo!", color: "#8b5cf6", bg: "#f5f3ff" }; // Morado
+            } else if (degrees === 360) {
+                return { name: "Completo", desc: "Mide exactamente 360°. ¡Da una vuelta entera!", color: "#ec4899", bg: "#fdf2f8" }; // Rosa
+            }
+            return { name: "Desconocido", desc: "", color: "#000", bg: "#fff" };
+        }
+
+        // Función principal para dibujar el ángulo
+        function drawAngle(degrees) {
+            // Limpiar el lienzo
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+            const radius = 140; // Longitud de las líneas
+            const arcRadius = 50; // Radio del arco de color
+
+            // Convertir grados a radianes. 
+            // En Canvas, los ángulos van en sentido horario y empiezan a las 3 en punto (derecha).
+            // Para enseñar como en la escuela (anti-horario), usamos valores negativos.
+            const radians = -degrees * (Math.PI / 180);
+
+            // Obtener información para colores
+            const info = getAngleInfo(degrees);
+
+            // 1. Dibujar el arco o relleno del ángulo
+            ctx.beginPath();
+            ctx.moveTo(cx, cy); // Ir al centro
+            // Si es 0 grados, no dibujamos el arco
+            if (degrees > 0) {
+                // Para 90 grados, a veces se dibuja un cuadrado, pero para mantenerlo 
+                // visualmente consistente y dinámico, un arco colorido está bien,
+                // pero si es exactamente 90, dibujaremos el cuadradito clásico también.
+                ctx.arc(cx, cy, arcRadius, 0, radians, true); // true = anti-horario
+                ctx.lineTo(cx, cy);
+                ctx.fillStyle = info.color + '40'; // Añadir transparencia (Hex 40)
+                ctx.fill();
+                
+                // Borde del arco
+                ctx.beginPath();
+                ctx.arc(cx, cy, arcRadius, 0, radians, true);
+                ctx.strokeStyle = info.color;
+                ctx.lineWidth = 4;
+                ctx.stroke();
+
+                // Detalle especial para ángulo recto (90 grados)
+                if (degrees === 90) {
+                    const sqSize = 25;
+                    ctx.beginPath();
+                    ctx.moveTo(cx + sqSize, cy);
+                    ctx.lineTo(cx + sqSize, cy - sqSize);
+                    ctx.lineTo(cx, cy - sqSize);
+                    ctx.strokeStyle = '#ef4444';
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+                }
+            }
+
+            // 2. Dibujar la línea base (fija a la derecha, 0 grados)
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(cx + radius, cy);
+            ctx.strokeStyle = '#374151'; // Gris oscuro
+            ctx.lineWidth = 8;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+
+            // 3. Dibujar la línea móvil (rotada)
+            const endX = cx + radius * Math.cos(radians);
+            const endY = cy + radius * Math.sin(radians);
+            
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(endX, endY);
+            ctx.strokeStyle = '#ec4899'; // Rosa vibrante para la línea que se mueve
+            ctx.lineWidth = 8;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+
+            // 4. Dibujar el punto central (Vértice)
+            ctx.beginPath();
+            ctx.arc(cx, cy, 10, 0, Math.PI * 2);
+            ctx.fillStyle = '#f59e0b'; // Naranja
+            ctx.fill();
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            
+            // 5. Dibujar texto de grados cerca del arco si es mayor a 0
+            if (degrees > 0) {
+                // Calcular la posición media del ángulo para poner el texto
+                const midRadians = radians / 2;
+                const textDist = arcRadius + 25;
+                const textX = cx + textDist * Math.cos(midRadians);
+                const textY = cy + textDist * Math.sin(midRadians);
+                
+                ctx.fillStyle = info.color;
+                ctx.font = 'bold 20px Nunito, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(degrees + '°', textX, textY);
+            }
+        }
+
+        // Función para actualizar toda la interfaz
+        function updateAll(degrees) {
+            // Asegurar que esté entre 0 y 360
+            degrees = Math.max(0, Math.min(360, degrees));
+            
+            // Sincronizar valores de inputs
+            slider.value = degrees;
+            numberInput.value = degrees;
+
+            // Actualizar textos
+            const info = getAngleInfo(degrees);
+            angleTypeName.textContent = info.name;
+            angleTypeName.style.color = info.color;
+            angleTypeDesc.textContent = info.desc;
+            infoCard.style.backgroundColor = info.bg;
+            infoCard.style.borderColor = info.color + '40';
+
+            // Redibujar
+            drawAngle(degrees);
+        }
+
+        // Event Listeners
+        slider.addEventListener('input', (e) => {
+            updateAll(parseInt(e.target.value));
+        });
+
+        numberInput.addEventListener('input', (e) => {
+            let val = e.target.value;
+            if(val !== '') {
+                updateAll(parseInt(val));
+            }
+        });
+        
+        // Evitar que el input numérico se quede vacío y falle
+        numberInput.addEventListener('blur', (e) => {
+            let val = e.target.value;
+            if(val === '' || isNaN(val)) {
+                updateAll(0);
+            }
+        });
+
+        // Dibujar el estado inicial
+        window.onload = () => {
+            updateAll(45);
+        };
+
+    </script>
+</body>
+</html>
